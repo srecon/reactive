@@ -1,10 +1,13 @@
 package com.blu.rest;
 
+import com.netflix.hystrix.HystrixCommand;
+import com.netflix.hystrix.HystrixCommandGroupKey;
+import com.netflix.hystrix.HystrixCommandProperties;
+import com.netflix.hystrix.HystrixThreadPoolProperties;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -13,33 +16,32 @@ import javax.ws.rs.core.Response;
  */
 // add json
 @Path("/hello")
-public class HelloWorldService {
-    private static int CNT=1;
-    @GET
-    @Path("/getmsg/{param}")
-    //@Produces(MediaType.APPLICATION_JSON)
-    public Response getMsg (@PathParam("param")  String param) throws Exception{
-        if(CNT%30 == 0){
-            System.out.println("imitate error " + CNT);
-            CNT++;
-            //throw new RuntimeException("exit");
-            Thread.sleep(5000);
-            return null;
-        }
-        System.out.println("Service invoked!! " + CNT);
+public class HelloWorldService extends HystrixCommand<String>{
+    private String echo;
+    public HelloWorldService() {
 
-        String resp = "Service sys: " + param;
-        CNT++;
-        return Response.status(200).entity(resp).build();
+        super(Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey("HelloWorld"))
+                        .andThreadPoolPropertiesDefaults(HystrixThreadPoolProperties.Setter().withCoreSize(100))
+                        .andCommandPropertiesDefaults(HystrixCommandProperties.Setter().withCircuitBreakerErrorThresholdPercentage(3)
+                        .withCircuitBreakerSleepWindowInMilliseconds(500)
+                        //.withCircuitBreakerRequestVolumeThreshold(10)
+
+                        )
+
+        );
     }
+
     @GET
     @Path("/echo/{param}")
     // http://localhost:9093/test/rest/hello/echo/helloworld
     public Response echo (@PathParam("param") String param){
-        System.out.println("Service echo invoked!!");
-        ReplayEcho replay = new ReplayEcho(param);
-        String response = replay.execute();
-        return Response.status(200).entity(response).build();
+        this.echo = param;
+        String resp = this.execute();
+        return Response.status(200).entity(resp).build();
     }
 
+    @Override
+    protected String run() throws Exception {
+        return new EchoImpl().sayHello(this.echo);
+    }
 }
