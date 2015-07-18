@@ -50,3 +50,5 @@ crashlytics-build.properties
 
 
 reactive-rest/reactive.log
+study-reactive/.idea
+reactive.log
