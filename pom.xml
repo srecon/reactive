@@ -10,5 +10,6 @@
   <modules>
     <module>study-reactive</module>
     <module>reactive-rest</module>
+    <module>simple-rest</module>
   </modules>
 </project>
